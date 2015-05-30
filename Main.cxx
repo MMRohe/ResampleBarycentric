@@ -570,12 +570,12 @@ RegistrationMethod::UpdateRule updateRule;
         FieldTypeWriter::Pointer writerSvf = FieldTypeWriter::New();
         writerSvf->SetFileName(svfFilename.str().c_str());
         writerSvf->SetInput(svfLambda);
-        writerSvf->Update();
+        //writerSvf->Update();
 
         ImageFileWriter::Pointer writerImage = ImageFileWriter::New();
         writerImage->SetFileName(imageFilename.str().c_str());
         writerImage->SetInput(currentImage);
-        writerImage->Update();
+        //writerImage->Update();
 
    }
 
