@@ -1,0 +1,83 @@
+# Project name
+PROJECT( LOCAL_LOG_DEMONS )
+
+# Define the minimum CMake version needed
+CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
+
+
+
+#======================================
+#
+# CMake for standard project
+#
+#======================================
+
+# Check if ITK is found and include useful files
+FIND_PACKAGE( ITK )
+IF( NOT ITK_FOUND )
+    MESSAGE( "Project ${PROJECT_NAME} requires ITK and ITK was not found. ${PROJECT_NAME} will not be built." )
+    RETURN()
+ENDIF()
+INCLUDE( ${ITK_USE_FILE} )
+
+# Includes MIPS include directory
+INCLUDE_DIRECTORIES( ${MIPS_IMAGEPKG_INCLUDE_DIRS} )
+
+# Set used libraries
+SET( LIBRARIES
+    ITKIO
+    ITKAlgorithms
+    mipsItkImageIO
+    ITKCommon
+    ITKStatistics
+    ITKNumerics
+)
+
+# Create old log demons executable
+ADD_EXECUTABLE(        oldExeLocalLogDemons LocalLogDemons.cxx )
+TARGET_LINK_LIBRARIES( oldExeLocalLogDemons ${LIBRARIES} )
+SET_TARGET_PROPERTIES( oldExeLocalLogDemons PROPERTIES OUTPUT_NAME "LogDemons" )
+
+# Install rules
+INSTALL( TARGETS oldExeLocalLogDemons RUNTIME DESTINATION bin )
+
+
+
+#======================================
+#
+# CMake for RPI project
+#
+#======================================
+
+# Check if TCLAP is found and include directory
+IF( NOT TCLAP_FOUND )
+    MESSAGE( "Project ${PROJECT_NAME} (RPI) requires TCLAP and TCLAP was not found. ${PROJECT_NAME} (RPI) will not be built." )
+    RETURN()
+ENDIF()
+INCLUDE_DIRECTORIES( ${TCLAP_INCLUDE_DIR} )
+
+# Set used libraries
+SET( LIBRARIES
+    ITKIO
+    ITKStatistics
+    mipsItkImageIO
+#    ITKAlgorithms
+#    ITKCommon
+#    ITKNumerics
+)
+
+# Create log demons library
+ADD_LIBRARY(           libLocalLogDemons rpiLocalLogDemons.cxx )
+TARGET_LINK_LIBRARIES( libLocalLogDemons ${LIBRARIES} )
+SET_TARGET_PROPERTIES( libLocalLogDemons PROPERTIES OUTPUT_NAME "RPILocalLogDemons" )
+
+# Create log demons executable
+ADD_EXECUTABLE(        exeLocalLogDemons rpiLocalLogDemonsExecutable.cxx )
+TARGET_LINK_LIBRARIES( exeLocalLogDemons libLocalLogDemons )
+SET_TARGET_PROPERTIES( exeLocalLogDemons PROPERTIES OUTPUT_NAME "rpiLocalLogDemons" )
+
+# Install rules
+INSTALL( TARGETS libLocalLogDemons exeLocalLogDemons
+         RUNTIME DESTINATION bin
+         LIBRARY DESTINATION lib
+         ARCHIVE DESTINATION lib/static)

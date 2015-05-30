@@ -1,0 +1,187 @@
+#ifndef __itkLocalIntensityScaling_txx
+#define __itkLocalIntensityScaling_txx 
+
+
+#include "itkLocalIntensityScaling.h"
+
+
+namespace itk
+{
+
+/* 
+**Constructor
+*/
+
+template<class TUncorrImage,class TRefImage> 
+LocalIntensityScaling<TUncorrImage,TRefImage>
+::LocalIntensityScaling()
+{
+for (int i=0;i<RefImageDimension;++i)
+m_Sigma[i]=10.0;
+}
+
+/*
+** Generating data 
+*/
+template<class TUncorrImage,class TRefImage> 
+void
+LocalIntensityScaling<TUncorrImage,TRefImage>
+::GenerateData(void)
+{
+
+  this->AllocateOutputs();
+  
+  m_Warper=WarperType::New();
+  m_Warper->SetDeformationField(m_Deformation);
+  m_Warper->SetInput(m_ReferenceImage); 
+  m_Warper->SetOutputDirection(m_ReferenceImage->GetDirection());
+  m_Warper->SetOutputSpacing(m_ReferenceImage->GetSpacing());
+  m_Warper->SetOutputOrigin(m_ReferenceImage->GetOrigin());
+  m_Warper->Update();
+  
+  m_UncorrectedImage = this->GetInput(0);
+
+  UncorrectedImageConstPointer FixImage = m_UncorrectedImage;
+
+//Compute avg(Fix)
+  m_DGF = DGFType::New();
+
+  m_DGF->SetInput(FixImage);
+  m_DGF->SetVariance( m_Sigma );
+
+  double maxKernelWidth = 0;
+  for (int i=0;i<RefImageDimension;++i)
+	if (maxKernelWidth<6*m_Sigma[i]) maxKernelWidth=6*m_Sigma[i] ;
+
+  m_DGF->SetMaximumKernelWidth(maxKernelWidth);
+  m_DGF->Update();
+
+  UncorrectedImagePointer MeanFixImage = m_DGF->GetOutput();
+
+  MeanFixImage->DisconnectPipeline();
+
+//Compute SD(Fix)
+  m_Subtracter=SubtracterType::New();
+
+  typename UncorrectedImageType::IndexType index1;
+  UncorrectedImagePointer FixSq =UncorrectedImageType::New();
+  FixSq->SetRegions(FixImage->GetBufferedRegion());
+  FixSq->SetOrigin(FixImage->GetOrigin());
+  FixSq->SetSpacing(FixImage->GetSpacing());
+  FixSq->SetDirection(FixImage->GetDirection());
+  FixSq->Allocate();
+
+  typedef typename itk::ImageRegionIterator <UncorrectedImageType> IteratorType;
+    IteratorType ItFSq = IteratorType(
+       FixSq, FixSq->GetBufferedRegion());
+    for( ItFSq.GoToBegin(); !ItFSq.IsAtEnd(); ++ItFSq )
+      {index1=ItFSq.GetIndex();
+      ItFSq.Set((FixImage->GetPixel(index1)-MeanFixImage->GetPixel(index1))*( FixImage->GetPixel(index1)-MeanFixImage->GetPixel(index1)) );
+      }
+
+
+  m_DGF->SetInput(FixSq);
+  m_DGF->SetVariance(m_Sigma);
+  m_DGF->SetMaximumKernelWidth(maxKernelWidth);
+  m_DGF->Update();
+  UncorrectedImagePointer SDFixImage=m_DGF->GetOutput();
+  SDFixImage->DisconnectPipeline();
+
+
+
+//Compute avg(Mov)
+  m_DGF->SetInput(m_Warper->GetOutput());
+  m_DGF->Update();
+
+  typename RefImageType::Pointer MeanMovImage = m_DGF->GetOutput();
+
+  MeanMovImage->DisconnectPipeline();
+
+
+//Compute Eps= G( (Fix-Avg(Fix)) * (Mov - Avg(Mov)) )
+  UncorrectedImagePointer Mult1 =UncorrectedImageType::New();
+  Mult1->SetRegions(FixImage->GetBufferedRegion());
+  Mult1->SetOrigin(FixImage->GetOrigin());
+  Mult1->SetSpacing(FixImage->GetSpacing());
+  Mult1->SetDirection(FixImage->GetDirection());
+  Mult1->Allocate();
+
+  IteratorType Itm1 = IteratorType(Mult1, Mult1->GetBufferedRegion());
+    for( Itm1.GoToBegin(); !Itm1.IsAtEnd(); ++Itm1 )
+      {index1=Itm1.GetIndex();
+      Itm1.Set((FixImage->GetPixel(index1) - MeanFixImage->GetPixel(index1))* (m_Warper->GetOutput()->GetPixel(index1)-MeanMovImage->GetPixel(index1))  );
+      }
+
+  m_DGF->SetInput(Mult1);
+  m_DGF->Update();
+
+  UncorrectedImagePointer  Eps= m_DGF->GetOutput();
+
+  Eps->DisconnectPipeline();
+
+//Compute A=Eps/SD(Fix)
+  UncorrectedImagePointer CoefA =UncorrectedImageType::New();
+  CoefA->SetRegions(FixImage->GetBufferedRegion());
+  CoefA->SetOrigin(FixImage->GetOrigin());
+  CoefA->SetSpacing(FixImage->GetSpacing());
+  CoefA->SetDirection(FixImage->GetDirection());
+  CoefA->Allocate();
+  float val;
+  IteratorType ItA = IteratorType(CoefA, CoefA->GetBufferedRegion());
+    for( ItA.GoToBegin(); !ItA.IsAtEnd(); ++ItA )
+      {index1=ItA.GetIndex();
+	if (SDFixImage->GetPixel(index1)!=0)
+		{
+		 val=Eps->GetPixel(index1)/SDFixImage->GetPixel(index1); 
+
+		ItA.Set(val);
+		}
+	else ItA.Set(0);
+      }
+
+
+//Compute A*(Fix-avg(Fix))
+  UncorrectedImagePointer CoefB =UncorrectedImageType::New();
+  CoefB->SetRegions(MeanFixImage->GetBufferedRegion());
+  CoefB->SetOrigin(MeanFixImage->GetOrigin());
+  CoefB->SetSpacing(MeanFixImage->GetSpacing());
+  CoefB->SetDirection(MeanFixImage->GetDirection());
+  CoefB->Allocate();
+
+  IteratorType ItB = IteratorType(CoefB, CoefB->GetBufferedRegion());
+    for( ItB.GoToBegin(); !ItB.IsAtEnd(); ++ItB )
+      {index1=ItB.GetIndex();
+	val= CoefA->GetPixel(index1)*(  FixImage->GetPixel(index1)- MeanFixImage->GetPixel(index1));
+
+	ItB.Set(val);
+      }
+
+
+//Compute I(t)=avg(Mov)+A*(Fix-avg(Fix))
+  m_Adder=AdderType::New();
+  m_Adder->SetInput1(CoefB);
+  m_Adder->SetInput2(MeanMovImage);
+  m_Adder->Update();
+
+  m_Corrected=(m_Adder->GetOutput());
+  SuperClass::GraftOutput(m_Corrected);
+
+}
+
+
+template<class TUncorrImage,class TRefImage>
+void
+LocalIntensityScaling<TUncorrImage,TRefImage>
+::PrintSelf(std::ostream& os, Indent indent) const 
+{
+SuperClass::PrintSelf(os,indent);
+
+os<< indent << "Printself" << std::endl;
+
+}
+
+}//end namespace itk
+#endif
+
+
+

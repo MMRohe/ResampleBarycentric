@@ -1,0 +1,405 @@
+#ifndef _RPI_DIFFEOMORPHIC_DEMONS_CXX_
+#define _RPI_DIFFEOMORPHIC_DEMONS_CXX_
+
+
+
+#include <itkHistogramMatchingImageFilter.h>
+#include "itkLogDomainDemonsRegistrationFilter.h"
+#include "itkSymmetricLogDomainDemonsRegistrationFilter.h"
+#include "itkMultiResolutionLogDomainDeformableRegistration.h"
+#include "rpiLogDemons.hxx"
+
+
+
+// Namespace RPI : Registration Programming Interface
+namespace rpi
+{
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::LogDemons(void)
+{
+
+    // Initialize parameters (except iterations)
+    this->m_updateRule                     = UPDATE_SYMMETRIC_LOG_DOMAIN;
+    this->m_gradientType                   = GRADIENT_SYMMETRIZED;
+    this->m_maximumUpdateStepLength        = 2.0;
+    this->m_updateFieldStandardDeviation   = 0.0;
+    this->m_velocityFieldStandardDeviation = 1.5;
+    this->m_BCHExpansion                   = 2;
+
+    // Initialize iterations
+    this->m_iterations.resize(3);
+    this->m_iterations[0] = 15;
+    this->m_iterations[1] = 10;
+    this->m_iterations[2] =  5;
+
+    // Initialize the transformation
+    this->m_transform                  = TransformType::New();
+    this->m_displacementFieldTransform = DisplacementFieldTransformType::New();
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::~LogDemons(void)
+{
+    // Do nothing
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+std::vector<unsigned int>
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetNumberOfIterations(void) const
+{
+    return this->m_iterations;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetNumberOfIterations(std::vector<unsigned int> iterations)
+{
+    this->m_iterations = iterations;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+typename LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::UpdateRule
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetUpdateRule(void) const
+{
+    return this->m_updateRule;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetUpdateRule(UpdateRule value)
+{
+    this->m_updateRule = value;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+typename LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GradientType
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetGradientType(void) const
+{
+    return this->m_gradientType;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetGradientType(GradientType value)
+{
+    this->m_gradientType = value;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+float
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetMaximumUpdateStepLength(void) const
+{
+    return this->m_maximumUpdateStepLength;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetMaximumUpdateStepLength(float value)
+{
+    if ( value>=0 )
+        this->m_maximumUpdateStepLength = value;
+    else
+        throw std::runtime_error( "Maximum step length must be greater than or equal to 0." );
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+float
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetUpdateFieldStandardDeviation(void) const
+{
+    return this->m_updateFieldStandardDeviation;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetUpdateFieldStandardDeviation(float value)
+{
+    if ( value>=0 )
+        this->m_updateFieldStandardDeviation = value;
+    else
+        throw std::runtime_error( "Standard deviation must be greater than or equal to 0." );
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+float
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetStationaryVelocityFieldStandardDeviation(void) const
+{
+    return this->m_velocityFieldStandardDeviation;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetStationaryVelocityFieldStandardDeviation(float value)
+{
+    if ( value>=0 )
+        this->m_velocityFieldStandardDeviation = value;
+    else
+        throw std::runtime_error( "Standard deviation must be greater than or equal to 0." );
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+bool
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetUseHistogramMatching(void) const
+{
+    return this->m_useHistogramMatching;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetUseHistogramMatching(bool value)
+{
+    this->m_useHistogramMatching = value;
+}
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+unsigned int
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetNumberOfTermsBCHExpansion(void) const
+{
+    return this->m_BCHExpansion;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetNumberOfTermsBCHExpansion(unsigned int value)
+{
+    this->m_BCHExpansion = value;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+typename LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::TransformPointerType
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetInitialTransformation(void) const
+{
+    return this->m_initialTransform;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::SetInitialTransformation(TransformType * transform)
+{
+    this->m_initialTransform = transform;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+typename LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::DisplacementFieldTransformPointerType
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::GetDisplacementFieldTransformation(void) const
+{
+    return this->m_displacementFieldTransform;
+}
+
+
+
+template < class TFixedImage, class TMovingImage, class TTransformScalarType >
+void
+LogDemons< TFixedImage, TMovingImage, TTransformScalarType >::StartRegistration(void)
+{
+
+
+    // Check if fixed image has been set
+    if (this->m_fixedImage.IsNull())
+        throw std::runtime_error( "Fixed image has not been set." );
+
+
+    // Check if moving image has been set
+    if (this->m_movingImage.IsNull())
+        throw std::runtime_error( "Moving image has not been set." );
+
+
+    // Type definition
+    typedef  typename  TFixedImage::PixelType                                 PixelType;
+    typedef  typename  TransformType::VelocityFieldType                       FieldContainerType;
+    typedef  typename  itk::MultiResolutionLogDomainDeformableRegistration< TFixedImage, TMovingImage, FieldContainerType, PixelType >
+            MultiResRegistrationFilterType;
+    typedef  typename  itk::LogDomainDeformableRegistrationFilter< TFixedImage, TMovingImage, FieldContainerType>
+            BaseRegistrationFilterType;
+
+
+    // Local images
+    typename  TFixedImage::ConstPointer   fixedImage  = this->m_fixedImage;
+    typename  TMovingImage::ConstPointer  movingImage = this->m_movingImage;
+
+
+    // Match the histogram between the fixed and moving images
+    if ( this->m_useHistogramMatching )
+    {
+        // Create and set the historgam matcher
+        typedef itk::HistogramMatchingImageFilter< TMovingImage, TMovingImage> MatchingFilterType;
+        typename MatchingFilterType::Pointer matcher = MatchingFilterType::New();
+        matcher->SetInput(                   this->m_movingImage );
+        matcher->SetReferenceImage(          this->m_fixedImage );
+        matcher->SetNumberOfHistogramLevels( 1024 );
+        matcher->SetNumberOfMatchPoints(     7 );
+        matcher->ThresholdAtMeanIntensityOn();
+
+        // Update the matcher
+        try
+        {
+            matcher->Update();
+        }
+        catch( itk::ExceptionObject& err )
+        {
+            throw std::runtime_error( "Could not match the histogram of input images." );
+        }
+
+        // Get the moving image
+        movingImage = matcher->GetOutput();
+        //movingImage->DisconnectPipeline();
+    }
+
+
+    // Initialize the filter
+    typename BaseRegistrationFilterType::Pointer filter;
+    switch ( this->m_updateRule )
+    {
+
+        case UPDATE_LOG_DOMAIN:
+            {
+                // Type definition
+                typedef  typename  itk::LogDomainDemonsRegistrationFilter< TFixedImage, TMovingImage, FieldContainerType>
+                        ActualRegistrationFilterType;
+                typedef  typename  ActualRegistrationFilterType::GradientType  Gradient;
+                // Create the "actual" registration filter, and set it to the existing filter
+                typename ActualRegistrationFilterType::Pointer actualfilter = ActualRegistrationFilterType::New();
+                actualfilter->SetMaximumUpdateStepLength( this->m_maximumUpdateStepLength );
+                actualfilter->SetUseGradientType(         static_cast<Gradient>( this->m_gradientType ) );
+                filter = actualfilter;
+            }
+            break;
+
+        case UPDATE_SYMMETRIC_LOG_DOMAIN:
+            {
+                // Type definition
+                typedef  typename  itk::SymmetricLogDomainDemonsRegistrationFilter< TFixedImage, TMovingImage, FieldContainerType>
+                        ActualRegistrationFilterType;
+                typedef  typename  ActualRegistrationFilterType::GradientType  Gradient;
+                // Create the "actual" registration filter, and set it to the existing filter
+                typename ActualRegistrationFilterType::Pointer actualfilter = ActualRegistrationFilterType::New();
+                actualfilter->SetMaximumUpdateStepLength( this->m_maximumUpdateStepLength );
+                actualfilter->SetUseGradientType(         static_cast<Gradient>( this->m_gradientType ) );
+                filter = actualfilter;
+            }
+            break;
+
+        default:
+            throw std::runtime_error( "Unsupported update rule." );
+    }
+
+
+    // This line was commented in the code of Tom
+    //filter->SetIntensityDifferenceThreshold( 0.001 );
+
+
+    // Define the multi-resolution filter
+    typename MultiResRegistrationFilterType::Pointer multires = MultiResRegistrationFilterType::New();
+    multires->SetFixedImage(         fixedImage );
+    multires->SetMovingImage(        movingImage );
+    multires->SetRegistrationFilter( filter );
+    multires->SetNumberOfLevels(     this->m_iterations.size() );
+    multires->SetNumberOfIterations( &m_iterations[0] );
+
+
+    // Set the field interpolator
+    typedef  itk::VectorLinearInterpolateNearestNeighborExtrapolateImageFunction< FieldContainerType, double >  FieldInterpolatorType;
+    typename FieldInterpolatorType::Pointer interpolator = FieldInterpolatorType::New();
+    multires->GetFieldExpander()->SetInterpolator( interpolator );
+
+
+    // Set the standard deviation of the displacement field smoothing
+    if ( this->m_velocityFieldStandardDeviation >= 0.1 )
+    {
+        multires->SetStandardDeviationsWorldUnit( this->m_velocityFieldStandardDeviation );
+        multires->SmoothVelocityFieldOn();
+    }
+    else
+        multires->SmoothVelocityFieldOff();
+
+
+    // Set the standard deviation of the update field smoothing
+    if ( this->m_updateFieldStandardDeviation >= 0.1 )
+    {
+        multires->SetUpdateFieldStandardDeviationsWorldUnit( this->m_updateFieldStandardDeviation );
+        multires->SmoothUpdateFieldOn();
+    }
+    else
+        multires->SmoothUpdateFieldOff();
+
+
+    // Set the initial displacement field only if it exists
+    if (this->m_initialTransform.IsNotNull())
+    {
+        typename TransformType::Pointer           transform = this->m_initialTransform;
+        typename FieldContainerType::ConstPointer field     = transform->GetVelocityField();
+        multires->SetArbitraryInitialVelocityField( const_cast<FieldContainerType *>(field.GetPointer()) );
+    }
+
+
+    // Start the registration process
+    try
+    {
+        multires->UpdateLargestPossibleRegion();
+    }
+    catch( itk::ExceptionObject& err )
+    {
+        std::cout << err << std::endl;
+        throw std::runtime_error( "Unexpected error." );
+    }
+
+
+    // Create the velocity field transform object
+    typename TransformType::Pointer stationaryVelocityFieldTransform = TransformType::New();
+    stationaryVelocityFieldTransform->SetVelocityField( static_cast<typename FieldContainerType::ConstPointer>( multires->GetVelocityField() ) );
+    this->m_transform = stationaryVelocityFieldTransform;
+
+
+    // Create the velocity field transform object
+    typename DisplacementFieldTransformType::Pointer displacementFieldTransform = DisplacementFieldTransformType::New();
+    displacementFieldTransform->SetDisplacementField( static_cast<typename FieldContainerType::ConstPointer>( multires->GetDeformationField() ) );
+    this->m_displacementFieldTransform = displacementFieldTransform;
+
+}
+
+
+} // End of namespace
+
+
+#endif // _RPI_DIFFEOMORPHIC_DEMONS_CXX_

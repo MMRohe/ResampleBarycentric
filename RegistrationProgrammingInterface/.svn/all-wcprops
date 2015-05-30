@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface
+END
+itkDisplacementFieldTransform.txx
+K 25
+svn:wc:ra_dav:version-url
+V 121
+/svn/mips/!svn/ver/5898/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/itkDisplacementFieldTransform.txx
+END
+rpiCommonTools.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/rpiCommonTools.cxx
+END
+itkDisplacementFieldTransform.h
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/svn/mips/!svn/ver/5898/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/itkDisplacementFieldTransform.h
+END
+itkStationaryVelocityFieldTransform.txx
+K 25
+svn:wc:ra_dav:version-url
+V 127
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/itkStationaryVelocityFieldTransform.txx
+END
+rpiRegistrationMethod.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/svn/mips/!svn/ver/6017/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/rpiRegistrationMethod.cxx
+END
+rpiCommonTools.hxx
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/rpiCommonTools.hxx
+END
+itkStationaryVelocityFieldTransform.h
+K 25
+svn:wc:ra_dav:version-url
+V 125
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/itkStationaryVelocityFieldTransform.h
+END
+rpiRegistrationMethod.hxx
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/svn/mips/!svn/ver/6017/trunk/SpecPkgs/RegistrationPkg/RegistrationProgrammingInterface/rpiRegistrationMethod.hxx
+END

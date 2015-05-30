@@ -1,0 +1,110 @@
+#ifndef __itkLocalIntensityScaling_h
+#define __itkLocalIntensityScaling_h
+
+#include "itkImageToImageFilter.h"
+#include "itkWarpImageFilter.h"
+#include "itkSubtractImageFilter.h"
+#include "itkAddImageFilter.h"
+#include "itkDiscreteGaussianImageFilter.h"
+#include "itkMultiplyImageFilter.h"
+#include "itkImageIterator.h"
+#include "itkImage.h"
+
+
+namespace itk
+{
+/**
+ * \class LocalIntensityScaling
+ *
+ * \brief Implementation of the local intensity scaling.
+ *
+ * Given an input image I and a reference image R, this class 
+ * provides an implementation of the local intensity 
+ * scaling, computed by minimization of the functional
+ * introduced in the P.Cachier's PhD thesis(2004). 
+ *
+ * Note that this class requires the specification of the standard 
+ * deviation of the gaussian smoothing of the similarity criteria (voxel units). 
+ *
+ * \author Marco Lorenzi, INRIA 
+ *
+ *
+ */
+
+
+template <class TUncorrImage, class TRefImage>
+class ITK_EXPORT LocalIntensityScaling : public ImageToImageFilter<TUncorrImage, TRefImage>
+	{
+	public: 
+		typedef LocalIntensityScaling					Self;
+		typedef itk::ImageToImageFilter<TUncorrImage,TRefImage>		SuperClass;
+		typedef itk::SmartPointer<Self>					Pointer;
+		typedef itk::SmartPointer<const Self>				ConstPointer;
+
+		itkNewMacro(Self);
+		itkTypeMacro(LocalIntensityScaling,ImageToImageFilter);
+
+		typedef TUncorrImage				UncorrectedImageType;
+		typedef typename TUncorrImage::PixelType	UncorrectedImagePixelType; 
+	  	typedef typename TUncorrImage::ConstPointer	UncorrectedImageConstPointer;
+		typedef typename TUncorrImage::Pointer		UncorrectedImagePointer;
+
+		typedef TRefImage				RefImageType;
+		typedef typename TRefImage::PixelType		RefImagePixelType; 
+	  	typedef typename TRefImage::ConstPointer	RefImageConstPointer;
+		typedef typename TRefImage::Pointer		RefImagePointer;
+
+			  
+		itkStaticConstMacro(RefImageDimension, unsigned int, TRefImage::ImageDimension);
+		typedef typename itk::Vector<RefImagePixelType,RefImageDimension> VectorType;
+		typedef typename itk::Image<VectorType,RefImageDimension> VectorImageType; 
+		typedef typename VectorImageType::Pointer  VectorImagePointer;
+
+
+		void SetDeformation(VectorImagePointer Deformation ){m_Deformation=Deformation;};
+		void SetSigma(const double Sigma[] ){for (int i=0;i<RefImageDimension;++i) m_Sigma[i]=Sigma[i];};
+		void SetReferenceImage( RefImageConstPointer Ref){m_ReferenceImage = Ref;};
+		RefImagePointer GetCorrected(void ){return m_Corrected;};
+
+
+  	protected:
+		  LocalIntensityScaling();
+		  virtual ~LocalIntensityScaling(){};
+		  void PrintSelf(std::ostream& os, Indent indent) const;
+
+		  void GenerateData(void);
+	
+	
+		  typedef itk::WarpImageFilter<TRefImage,TRefImage,VectorImageType> WarperType;
+		  typedef itk::SubtractImageFilter<TUncorrImage,TUncorrImage,TUncorrImage> SubtracterType;
+		  typedef itk::AddImageFilter<TUncorrImage,TUncorrImage,TUncorrImage> AdderType;
+		  typedef itk::MultiplyImageFilter<TUncorrImage,TUncorrImage,TUncorrImage> MultiplierType;
+	 	  typedef itk::DiscreteGaussianImageFilter<TUncorrImage,TUncorrImage> DGFType;	  
+
+	 private: 
+	  LocalIntensityScaling(const Self&);
+	  void operator=(const Self&);
+
+	  UncorrectedImageConstPointer		m_UncorrectedImage;
+	  RefImageConstPointer			m_ReferenceImage;	  
+ 	  UncorrectedImagePointer		m_Corrected;
+
+	  VectorImagePointer 			m_Deformation;
+	  typename WarperType::Pointer 		m_Warper;
+     	  typename SubtracterType::Pointer 	m_Subtracter;
+	  typename AdderType::Pointer  		m_Adder;
+	  typename MultiplierType::Pointer 	m_Multiplier;
+	  typename DGFType::Pointer 		m_DGF;
+	  double				m_Sigma[RefImageDimension];
+
+
+       	};
+
+} // end namespace itk
+
+#ifndef ITK_MANUAL_INSTANTIATION
+#include "itkLocalIntensityScaling.txx"
+#endif
+
+#endif
+

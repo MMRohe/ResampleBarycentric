@@ -1,0 +1,441 @@
+#ifndef __itkLocalCriteriaOptimizer_txx
+#define __itkLocalCriteriaOptimizer_txx 
+
+
+#include "itkLocalCriteriaOptimizer.h"
+#include "itkVectorNeighborhoodOperatorImageFilter.h"
+#include "itkGaussianOperator.h"
+#include "vnl/vnl_math.h"
+#include "itkDiscreteGaussianImageFilter.h"
+#include "itkGradientImageFilter.h"
+#include "math.h"
+
+
+
+#include "itkImageFileWriter.h"
+
+
+
+
+
+
+namespace itk
+{
+/*
+** This function provides a general gaussian smoothing. It is templated on the type of input image. 
+*/
+template<class TImageType>
+itk::SmartPointer<TImageType> SmoothGivenField(itk::SmartPointer<TImageType> VectorField,double* Sigma)
+{
+
+typedef  itk::VectorNeighborhoodOperatorImageFilter <TImageType,TImageType> VectNeighType;
+
+typedef typename TImageType::PixelType  PixelType;
+typedef typename PixelType::ValueType   ScalarType;
+
+itkStaticConstMacro(ImageDimension, unsigned int, TImageType::ImageDimension);
+typedef typename itk::GaussianOperator<ScalarType,ImageDimension> OperatorType;
+OperatorType * oper=new OperatorType;
+
+
+typedef typename  TImageType::PixelContainerPointer PixelContainerPointer;
+
+PixelContainerPointer swapPtr;
+
+
+typename VectNeighType::Pointer VectNeigh=VectNeighType::New();
+typename TImageType::Pointer field=VectorField;
+
+for (int i =0;i<ImageDimension;++i)
+        {
+        oper->SetDirection(i);
+        oper->SetVariance(Sigma[i]);
+        oper->SetMaximumKernelWidth(6*Sigma[i]);
+        oper->CreateDirectional();
+
+        VectNeigh->SetOperator(*oper);
+        VectNeigh->SetInput(field);
+        VectNeigh->Update();
+        if (i<ImageDimension-1)
+                {
+                 swapPtr=VectNeigh->GetOutput()->GetPixelContainer();
+                 VectNeigh->GraftOutput(field);
+                 field->SetPixelContainer(swapPtr);
+                 VectNeigh->Modified();
+                }
+
+        }
+
+
+field->SetPixelContainer( VectNeigh->GetOutput()->GetPixelContainer() ); 
+field->SetRequestedRegion( VectNeigh->GetOutput()->GetRequestedRegion() );
+field->SetBufferedRegion( VectNeigh->GetOutput()->GetBufferedRegion() );                     
+field->SetLargestPossibleRegion( VectNeigh->GetOutput()->GetLargestPossibleRegion() );       
+field->CopyInformation( VectNeigh->GetOutput() );
+field->DisconnectPipeline();
+return field;
+}
+
+
+
+/*
+** Constructor
+*/
+
+template<class TFixedImage,class TMovingImage, class TDeformationField> 
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::LocalCriteriaOptimizer()
+{
+  for (int i=0;i<FixedImageDimension;++i)
+	 m_Sigma[i]=10;
+
+  m_TimeStep = 1.0;
+
+  typename DefaultInterpolatorType::Pointer interp = DefaultInterpolatorType::New();
+  m_MovingImageInterpolator = static_cast<InterpolatorType*>(interp.GetPointer() );
+
+  m_MovingImageWarper = WarperType::New();
+  m_MovingImageWarper->SetInterpolator( m_MovingImageInterpolator );
+  m_MovingImageWarper->SetEdgePaddingValue( NumericTraits<MovingImagePixelType>::max() );
+
+
+  this->SetMovingImage(NULL);
+  this->SetFixedImage(NULL);
+  m_FixedImageSpacing.Fill( 1.0 );
+  m_FixedImageOrigin.Fill( 0.0 );
+  m_FixedImageDirection.SetIdentity();
+
+  m_Metric = NumericTraits<double>::max();
+  m_SumOfLocalSquaredDifference = 0.0;
+  m_NumberOfPixelsProcessed = 0L;
+  m_RMSChange = NumericTraits<double>::max();
+  m_SumOfLocalSquaredChange = 0.0;
+
+
+}
+
+
+
+template<class TFixedImage,class TMovingImage, class TDeformationField> 
+typename LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::VectorType
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::ComputeUpdate(const NeighborhoodType &it, void * gd,
+                const FloatOffsetType& itkNotUsed(offset) )
+{
+
+  GlobalDataStruct *globalData = (GlobalDataStruct *)gd;
+
+  VectorType update;
+
+vnl_matrix<double> J(3,3),A(3,3); 
+
+
+
+	IndexType indexV=it.GetIndex();
+
+	for ( int i = 0; i < FixedImageDimension; ++i)
+    		{
+	    	for (int j = 0; j < FixedImageDimension; ++j)
+		      {
+		      J[i][j] =  m_SmoothedHess->GetPixel(indexV)[FixedImageDimension*i+j];
+		      }
+    		}
+	//float det=vnl_determinant(J);
+
+	for (int k=0;k<FixedImageDimension;k++)
+	update[k]=0;
+
+	if ( J.is_finite())
+		{	
+		A=vnl_matrix_inverse<double>(J);
+		
+			
+		for ( int i = 0; i < 3; ++i)
+			{
+			 for (int j = 0; j < FixedImageDimension; ++j)
+				{
+				update[i]-= A[i][j]*m_SmoothedSimGrad->GetPixel(indexV)[j] ;
+				}
+			}
+
+		}
+/*
+** Update the global data
+*/
+
+if ( globalData )
+ {
+      globalData->m_SumOfLocalSquaredDifference +=m_SimilarityImage->GetPixel(indexV)  ;
+      globalData->m_NumberOfPixelsProcessed += 1;
+      globalData->m_SumOfLocalSquaredChange += update.GetSquaredNorm();
+    }
+return(update);
+
+}
+
+
+
+
+
+template<class TFixedImage,class TMovingImage, class TDeformationField>
+void
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::InitializeIteration(void)
+{
+  if( !this->GetMovingImage() || !this->GetFixedImage()
+      || !m_MovingImageInterpolator )
+    {
+    itkExceptionMacro(
+       << "MovingImage, FixedImage and/or Interpolator not set" );
+    }
+
+  // cache fixed image information
+  m_FixedImageOrigin  = this->GetFixedImage()->GetOrigin();
+  m_FixedImageSpacing = this->GetFixedImage()->GetSpacing();
+  m_FixedImageDirection = this->GetFixedImage()->GetDirection();
+
+
+  // Compute warped moving image
+  m_MovingImageWarper->SetOutputOrigin( this->m_FixedImageOrigin );
+  m_MovingImageWarper->SetOutputSpacing( this->m_FixedImageSpacing );
+  m_MovingImageWarper->SetOutputDirection( this->m_FixedImageDirection );
+  m_MovingImageWarper->SetInput( this->GetMovingImage() );
+  m_MovingImageWarper->SetDeformationField( this->GetDeformationField() );
+  m_MovingImageWarper->GetOutput()->SetRequestedRegion( this->GetDeformationField()->GetRequestedRegion() );
+  m_MovingImageWarper->Update();
+ 
+
+
+  // setup moving image interpolator for further access
+  m_MovingImageInterpolator->SetInputImage( this->GetMovingImage() );
+
+
+  //First optimization of the criteria: intensity scaling of the fixed image. 
+  m_IScaler = IScalingType::New();
+  m_IScaler->SetInput(this->GetFixedImage());
+  m_IScaler->SetReferenceImage(this->GetMovingImage() );
+  m_IScaler->SetSigma(m_Sigma);
+  m_IScaler->SetDeformation(this->GetDeformationField());        
+  m_IScaler->Update();
+  
+  m_FixedScaled= m_IScaler->GetOutput();
+
+ this->EvaluateHighOrderTerms();
+ 	 
+ }
+
+
+template<class TFixedImage,class TMovingImage, class TDeformationField>
+void
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::PrintSelf(std::ostream& os, Indent indent) const 
+{
+SuperClass::PrintSelf(os,indent);
+
+os<< indent << "Printself" << std::endl;
+
+}
+
+template <class TFixedImage, class TMovingImage, class TDeformationField>
+void
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::EvaluateHighOrderTerms(void)
+{   
+
+MovingImagePointer MovImage = m_MovingImageWarper->GetOutput();
+//std::cout<<"Inside High order terms"<<std::endl;
+FixedImagePointer FixImage = m_FixedScaled;
+
+typedef  itk::GradientImageFilter<FixedImageType> GradientT;
+typename GradientT::Pointer Gradient = GradientT::New();
+Gradient->SetInput(MovImage);
+Gradient->Update();
+
+
+typename CovVectorImageType::Pointer field= SmoothGivenField<CovVectorImageType> (Gradient->GetOutput(),m_Sigma);
+m_Subtracter=SubtracterType::New();
+m_Subtracter->SetInput1(field);
+m_Subtracter->SetInput2(Gradient->GetOutput());
+m_Subtracter->Update();
+
+
+typename CovVectorImageType::Pointer field1=m_Subtracter->GetOutput();
+
+
+typename MatrixImageType::Pointer Mult =MatrixImageType::New();
+Mult->SetRegions(FixImage->GetBufferedRegion());
+Mult->SetOrigin(FixImage->GetOrigin());
+Mult->SetSpacing(FixImage->GetSpacing());
+Mult->SetDirection(FixImage->GetDirection());
+Mult->Allocate();
+
+
+MatrixType VJ;
+
+typedef typename itk::ImageRegionIterator<MatrixImageType> MatrixIteratorType;
+MatrixIteratorType out = MatrixIteratorType(Mult, Mult->GetBufferedRegion());
+typename MatrixImageType::IndexType index1;
+for (out.GoToBegin();!out.IsAtEnd();++out)
+{
+
+index1=out.GetIndex();
+
+for (unsigned int d=0; d<FixedImageDimension; d++)
+      {
+      for (unsigned int dd=0; dd<FixedImageDimension; dd++)
+        {
+        VJ[FixedImageDimension*d+dd] =  field1->GetPixel(index1)[d]*field1->GetPixel(index1)[dd] ;
+        }
+     }
+
+Mult->SetPixel(index1,VJ);
+}
+
+
+//Implementing a Levenberg optimization strategy by adding 0.1Id to the Hessian (mostly for boundary condition control)
+typename MatrixImageType::Pointer SmH= SmoothGivenField<MatrixImageType>(Mult,m_Sigma);
+
+typename MatrixImageType::Pointer FinalH =MatrixImageType::New();
+FinalH->SetRegions(FixImage->GetBufferedRegion());
+FinalH->SetOrigin(FixImage->GetOrigin());
+FinalH->SetSpacing(FixImage->GetSpacing());
+FinalH->SetDirection(FixImage->GetDirection());
+FinalH->Allocate();
+
+MatrixIteratorType outF = MatrixIteratorType(FinalH, FinalH->GetBufferedRegion());
+
+for (outF.GoToBegin();!outF.IsAtEnd();++outF)
+{
+
+index1=outF.GetIndex();
+
+for (unsigned int d=0; d<FixedImageDimension; d++)
+      {
+      for (unsigned int dd=0; dd<FixedImageDimension; dd++)
+        {
+        VJ[FixedImageDimension*d+dd] =  SmH->GetPixel(index1)[ FixedImageDimension*d+dd ];
+	if (d==dd) VJ[FixedImageDimension*d+dd]+=0.1;
+        }
+     }
+
+FinalH->SetPixel(index1,VJ);
+}
+
+
+this->SetHessian(FinalH);
+
+
+//typename MatrixImageType::Pointer 
+VectorImagePointer Grad = VectorImageType::New();
+Grad->SetRegions(FixImage->GetBufferedRegion());
+Grad->SetOrigin(FixImage->GetOrigin());
+Grad->SetSpacing(FixImage->GetSpacing());
+Grad->SetDirection(FixImage->GetDirection());
+Grad->Allocate();
+
+
+FixedImagePointer Sim = FixedImageType::New();
+Sim->SetRegions(MovImage->GetBufferedRegion());
+Sim->SetOrigin(MovImage->GetOrigin());
+Sim->SetSpacing(MovImage->GetSpacing());
+Sim->SetDirection(MovImage->GetDirection());
+Sim->Allocate();
+
+typedef typename itk::ImageRegionIterator <VectorImageType> IteratorType;
+typedef typename itk::ImageRegionIterator <FixedImageType> ScalarIteratorType;
+
+
+    ScalarIteratorType ItScalar = ScalarIteratorType( Sim, Sim->GetBufferedRegion());
+    IteratorType ItGrad = IteratorType( Grad, Grad->GetBufferedRegion());
+
+typename VectorImageType::IndexType indexV;
+itk::Vector<float,FixedImageDimension> vector,update;
+
+float speed;
+
+for( ItGrad.GoToBegin(),ItScalar.GoToBegin(); !ItGrad.IsAtEnd(); ++ItGrad,++ItScalar )
+      { vector.Fill(0);
+        indexV=ItGrad.GetIndex();
+	speed=(FixImage->GetPixel(indexV)- MovImage->GetPixel(indexV));
+
+	if (fabs(speed)>1e+10)
+	  {
+    	    ItScalar.Set(0.0);
+            ItGrad.Set(vector);
+	  }
+
+	else
+	  {
+	        for (int i=0;i<FixedImageDimension;++i)
+        	    {
+                	vector[i]= (speed)*field1->GetPixel(indexV)[i];
+            	    }	
+	
+	    ItScalar.Set(speed*speed);
+            ItGrad.Set(vector);	
+	 }
+	
+        }
+typedef typename itk::DiscreteGaussianImageFilter <TFixedImage,TFixedImage> DGFType; 
+
+
+
+  typename DGFType::Pointer DGF=DGFType::New();
+  DGF->SetInput(Sim);
+  DGF->SetVariance( m_Sigma[1] );
+  DGF->SetMaximumKernelWidth(6* m_Sigma[1]);
+  DGF->Update();
+
+this->SetSimilarityImage(DGF->GetOutput());
+this->SetSimGrad(SmoothGivenField<VectorImageType>(Grad,m_Sigma));
+
+/*
+
+typedef typename itk::ImageFileWriter<FixedImageType> WriterType;
+typename WriterType::Pointer wr1=WriterType::New();
+wr1->SetInput(FixImage);
+wr1->SetFileName("Fix.mha");
+wr1->Update();
+typename WriterType::Pointer wr2=WriterType::New();
+wr2->SetInput(MovImage);
+wr2->SetFileName("Mov.mha");
+wr2->Update();
+
+
+typename WriterType::Pointer wr=WriterType::New();
+wr->SetInput(Sim);
+wr->SetFileName("SIMILARITY.mha");
+wr->Update();
+std::cout<<"Test written"<<std::endl;
+
+
+*/
+}
+
+template <class TFixedImage, class TMovingImage, class TDeformationField>
+void
+LocalCriteriaOptimizer<TFixedImage,TMovingImage,TDeformationField>
+::ReleaseGlobalDataPointer( void *gd ) const
+{   
+  GlobalDataStruct * globalData = (GlobalDataStruct *) gd;
+    
+  m_MetricCalculationLock.Lock();
+  m_SumOfLocalSquaredDifference += globalData->m_SumOfLocalSquaredDifference;
+  m_NumberOfPixelsProcessed += globalData->m_NumberOfPixelsProcessed;
+  m_SumOfLocalSquaredChange += globalData->m_SumOfLocalSquaredChange;
+  if( m_NumberOfPixelsProcessed )
+    {     
+    m_Metric = m_SumOfLocalSquaredDifference /
+               static_cast<double>( m_NumberOfPixelsProcessed );
+    m_RMSChange = vcl_sqrt( m_SumOfLocalSquaredChange /
+               static_cast<double>( m_NumberOfPixelsProcessed ) );
+    }
+  m_MetricCalculationLock.Unlock();
+  
+  delete globalData;
+} 
+
+}//end namespace itk
+#endif
+

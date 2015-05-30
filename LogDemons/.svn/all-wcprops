@@ -1,0 +1,155 @@
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/LogDemons
+END
+vnl_sd_matrix_tools.h
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/vnl_sd_matrix_tools.h
+END
+itkTransformToVelocityFieldSource.h
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkTransformToVelocityFieldSource.h
+END
+itkMultiResolutionLogDomainDeformableRegistration.h
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/svn/mips/!svn/ver/5953/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkMultiResolutionLogDomainDeformableRegistration.h
+END
+itkLogDomainDeformableRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/mips/!svn/ver/5953/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkLogDomainDeformableRegistrationFilter.txx
+END
+itkVelocityFieldLieBracketFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 101
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkVelocityFieldLieBracketFilter.txx
+END
+itkLogDomainDeformableRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/svn/mips/!svn/ver/5953/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkLogDomainDeformableRegistrationFilter.h
+END
+ModuleConfig.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/ModuleConfig.cmake
+END
+itkVelocityFieldLieBracketFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkVelocityFieldLieBracketFilter.h
+END
+rpiLogDemons.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/LogDemons/rpiLogDemons.cxx
+END
+itkVelocityFieldBCHCompositionFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkVelocityFieldBCHCompositionFilter.txx
+END
+rpiLogDemonsExecutable.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/LogDemons/rpiLogDemonsExecutable.cxx
+END
+itkVelocityFieldBCHCompositionFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkVelocityFieldBCHCompositionFilter.h
+END
+itkExponentialDeformationFieldImageFilter2.txx
+K 25
+svn:wc:ra_dav:version-url
+V 111
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkExponentialDeformationFieldImageFilter2.txx
+END
+itkSymmetricLogDomainDemonsRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkSymmetricLogDomainDemonsRegistrationFilter.txx
+END
+rpiLogDemons.hxx
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/mips/!svn/ver/6038/trunk/SpecPkgs/RegistrationPkg/LogDemons/rpiLogDemons.hxx
+END
+itkOppositeImageFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkOppositeImageFilter.h
+END
+itkLogDomainDemonsRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/mips/!svn/ver/5941/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkLogDomainDemonsRegistrationFilter.txx
+END
+itkSymmetricLogDomainDemonsRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/svn/mips/!svn/ver/5941/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkSymmetricLogDomainDemonsRegistrationFilter.h
+END
+itkExponentialDeformationFieldImageFilter2.h
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkExponentialDeformationFieldImageFilter2.h
+END
+LogDomainDemonsRegistration.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/mips/!svn/ver/5955/trunk/SpecPkgs/RegistrationPkg/LogDemons/LogDomainDemonsRegistration.cxx
+END
+vnl_sd_matrix_tools.txx
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/vnl_sd_matrix_tools.txx
+END
+itkTransformToVelocityFieldSource.txx
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/mips/!svn/ver/5936/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkTransformToVelocityFieldSource.txx
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/mips/!svn/ver/6029/trunk/SpecPkgs/RegistrationPkg/LogDemons/CMakeLists.txt
+END
+itkMultiResolutionLogDomainDeformableRegistration.txx
+K 25
+svn:wc:ra_dav:version-url
+V 118
+/svn/mips/!svn/ver/5955/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkMultiResolutionLogDomainDeformableRegistration.txx
+END
+itkLogDomainDemonsRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/svn/mips/!svn/ver/5941/trunk/SpecPkgs/RegistrationPkg/LogDemons/itkLogDomainDemonsRegistrationFilter.h
+END

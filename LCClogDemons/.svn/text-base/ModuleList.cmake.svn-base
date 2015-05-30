@@ -1,0 +1,10 @@
+# this defines all available modules in this project,
+# either locally or pre-built.
+#
+# these need to be in the ORDER OF COMPILATION
+# reflecting the module dependencies!
+#
+SET (ALLMODULES
+# list the modules here:
+
+)

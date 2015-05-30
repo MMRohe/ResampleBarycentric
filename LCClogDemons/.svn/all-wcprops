@@ -1,0 +1,137 @@
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons
+END
+rpiLocalLogDemonsExecutable.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 101
+/svn/mips/!svn/ver/6062/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/rpiLocalLogDemonsExecutable.cxx
+END
+itkSymmetricLocalLogDomainDemonsRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 124
+/svn/mips/!svn/ver/6054/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkSymmetricLocalLogDomainDemonsRegistrationFilter.txx
+END
+rpiLocalLogDemons.hxx
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/mips/!svn/ver/6062/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/rpiLocalLogDemons.hxx
+END
+itkLocalLogDomainDemonsRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/svn/mips/!svn/ver/6046/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalLogDomainDemonsRegistrationFilter.txx
+END
+itkSymmetricLocalLogDomainDemonsRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 122
+/svn/mips/!svn/ver/6054/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkSymmetricLocalLogDomainDemonsRegistrationFilter.h
+END
+itkMultiResolutionLocalLogDomainDeformableRegistration.txx
+K 25
+svn:wc:ra_dav:version-url
+V 128
+/svn/mips/!svn/ver/6054/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkMultiResolutionLocalLogDomainDeformableRegistration.txx
+END
+itkLocalLogDomainDemonsRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/svn/mips/!svn/ver/6046/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalLogDomainDemonsRegistrationFilter.h
+END
+ModuleConfig.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/ModuleConfig.cmake
+END
+itkLocalIntensityScaling.txx
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svn/mips/!svn/ver/6053/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalIntensityScaling.txx
+END
+itkMultiResolutionLocalLogDomainDeformableRegistration.h
+K 25
+svn:wc:ra_dav:version-url
+V 126
+/svn/mips/!svn/ver/6046/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkMultiResolutionLocalLogDomainDeformableRegistration.h
+END
+itkCommandIterationUpdate.h
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/mips/!svn/ver/6057/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkCommandIterationUpdate.h
+END
+itkLocalIntensityScaling.h
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/mips/!svn/ver/6056/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalIntensityScaling.h
+END
+ModuleList.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/ModuleList.cmake
+END
+itkLocalLogDomainDeformableRegistrationFilter.txx
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/svn/mips/!svn/ver/6054/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalLogDomainDeformableRegistrationFilter.txx
+END
+LocalLogDemons.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/LocalLogDemons.cxx
+END
+itkLocalLogDomainDeformableRegistrationFilter.h
+K 25
+svn:wc:ra_dav:version-url
+V 117
+/svn/mips/!svn/ver/6046/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalLogDomainDeformableRegistrationFilter.h
+END
+PackageConfig.cmake.in
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/PackageConfig.cmake.in
+END
+itkLocalCriteriaOptimizer.txx
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/mips/!svn/ver/6088/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalCriteriaOptimizer.txx
+END
+PackageName.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/PackageName.cmake
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/mips/!svn/ver/6042/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/CMakeLists.txt
+END
+itkLocalCriteriaOptimizer.h
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/mips/!svn/ver/6056/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/itkLocalCriteriaOptimizer.h
+END
+rpiLocalLogDemons.cxx
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/mips/!svn/ver/6062/trunk/SpecPkgs/RegistrationPkg/LocalLogDemons/rpiLocalLogDemons.cxx
+END
