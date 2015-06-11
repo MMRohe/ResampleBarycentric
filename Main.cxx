@@ -577,6 +577,48 @@ RegistrationMethod::UpdateRule updateRule;
         writerImage->SetInput(currentImage);
         //writerImage->Update();
 
+        if (iteration==args.nbrIterations)
+        {
+        std::ostringstream svf1Final;
+        svf1Final<<args.outputFolder;
+        svf1Final<<"SVFOutput_Finalv1";
+        svf1Final<<"_F";
+        svf1Final<<args.nbrFrame;
+        svf1Final<<".mha";
+
+        std::ostringstream svf2Final;
+        svf2Final<<args.outputFolder;
+        svf2Final<<"SVFOutput_Finalv2";
+        svf2Final<<"_F";
+        svf2Final<<args.nbrFrame;
+        svf2Final<<".mha";
+
+        std::ostringstream svf3Final;
+        svf3Final<<args.outputFolder;
+        svf3Final<<"SVFOutput_Finalv3";
+        svf3Final<<"_F";
+        svf3Final<<args.nbrFrame;
+        svf3Final<<".mha";
+
+
+
+
+
+        FieldTypeWriter::Pointer writerSvf = FieldTypeWriter::New();
+        writerSvf->SetFileName(svf1Final.str().c_str());
+        writerSvf->SetInput(svf1);
+        writerSvf->Update();
+
+        writerSvf->SetFileName(svf2Final.str().c_str());
+        writerSvf->SetInput(svf2);
+        writerSvf->Update();
+
+        writerSvf->SetFileName(svf3Final.str().c_str());
+        writerSvf->SetInput(svf3);
+        writerSvf->Update();
+
+        }
+
    }
 
    ImageRef1->DisconnectPipeline();
