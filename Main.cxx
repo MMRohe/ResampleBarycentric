@@ -203,7 +203,7 @@ void parseOpts (int argc, char **argv, struct arguments & args)
     args.sigmaI= command.GetValueAsFloat("SigmaI","floatval");
     args.sigmaVel= command.GetValueAsFloat("SigmaVel","floatval");
     args.refMesh=command.GetValueAsInt("RegMesh","intval");
-            args.regularExpression=command.GetValueAsFloat("Reg","filename");
+            args.regularExpression=command.GetValueAsString("Reg","filename");
             args.alphabeticalSort=command.GetValueAsBool("AlphabeticalSort","boolval");
             args.maskImage=command.GetValueAsString("maskImage","filename");
 
@@ -423,7 +423,10 @@ int main( int argc, char *argv[] )
             std::cout << "spacing 2 " << spacing[2] << std::endl;
             std::cout << "basespacing 2 " << baseSpacing[2] << std::endl;
 
+            SliceImageType::Pointer maskSliceImage = 0;
 
+            if (!args.maskImage.empty())
+            {
             ExtractSliceFilterType::Pointer extractMaskSlice = ExtractSliceFilterType::New();
             extractMaskSlice->SetInput(maskImage);
 
@@ -443,9 +446,9 @@ int main( int argc, char *argv[] )
             extractMaskSlice->Update();
 
 
-            SliceImageType::Pointer maskSliceImage = extractMaskSlice->GetOutput();
+            maskSliceImage = extractMaskSlice->GetOutput();
             maskSliceImage->DisconnectPipeline();
-
+            }
 
 
             SliceImageType::SpacingType sliceSpacing;
