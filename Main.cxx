@@ -425,30 +425,6 @@ int main( int argc, char *argv[] )
 
             SliceImageType::Pointer maskSliceImage = 0;
 
-            if (!args.maskImage.empty())
-            {
-            ExtractSliceFilterType::Pointer extractMaskSlice = ExtractSliceFilterType::New();
-            extractMaskSlice->SetInput(maskImage);
-
-            ImageType::RegionType region;
-
-            ImageType::SizeType size=maskImage->GetLargestPossibleRegion().GetSize();
-            size[2]=0;
-            region.SetSize(size);
-
-            ImageType::IndexType index;
-            index.Fill(0);
-            index[2]=j;
-            region.SetIndex(index);
-
-            extractMaskSlice->SetExtractionRegion(region);
-            extractMaskSlice->SetDirectionCollapseToSubmatrix();
-            extractMaskSlice->Update();
-
-
-            maskSliceImage = extractMaskSlice->GetOutput();
-            maskSliceImage->DisconnectPipeline();
-            }
 
 
             SliceImageType::SpacingType sliceSpacing;
@@ -507,9 +483,35 @@ int main( int argc, char *argv[] )
 
             currentImage->Allocate();
 
-            maskSliceImage->SetOrigin(sliceOrigin);
-            maskSliceImage->SetSpacing(sliceSpacing);
-            maskSliceImage->SetDirection(direction);
+            if (!args.maskImage.empty())
+            {
+                ExtractSliceFilterType::Pointer extractMaskSlice = ExtractSliceFilterType::New();
+                extractMaskSlice->SetInput(maskImage);
+
+                ImageType::RegionType region;
+
+                ImageType::SizeType size=maskImage->GetLargestPossibleRegion().GetSize();
+                size[2]=0;
+                region.SetSize(size);
+
+                ImageType::IndexType index;
+                index.Fill(0);
+                index[2]=j;
+                region.SetIndex(index);
+
+                extractMaskSlice->SetExtractionRegion(region);
+                extractMaskSlice->SetDirectionCollapseToSubmatrix();
+                extractMaskSlice->Update();
+
+
+                maskSliceImage = extractMaskSlice->GetOutput();
+                maskSliceImage->DisconnectPipeline();
+
+                maskSliceImage->SetOrigin(sliceOrigin);
+                maskSliceImage->SetSpacing(sliceSpacing);
+                maskSliceImage->SetDirection(direction);
+            }
+
 
 
 
