@@ -47,7 +47,7 @@ struct arguments
         return o
         <<"  Arguments structure:"<<std::endl
         <<" Mask image path:" << std::endl
-        <<"  Number Iterations: "<<args.nbrIterations<<std::endl
+        <<" Number Iterations: "<<args.nbrIterations<<std::endl
         <<" Update Rule:" << args.updateRule<< std::endl
         <<" Regularization:" << args.regularization<< std::endl
         <<" Sigma I:" << args.sigmaI<< std::endl
@@ -150,9 +150,9 @@ void parseOpts (int argc, char **argv, struct arguments & args)
     command.SetOptionLongTag("OutputFolder","output-folder");
     command.AddOptionField("OutputFolder","filename",MetaCommand::STRING,false,"");
 
-    command.SetOption("inputImage","I",true,"Input folder");
-    command.SetOptionLongTag("InputFolder","input-folder");
-    command.AddOptionField("InputFolder","filename",MetaCommand::STRING,true,"");
+    command.SetOption("InputImage","I",true,"Input folder");
+    command.SetOptionLongTag("InputImage","input-folder");
+    command.AddOptionField("InputImage","filename",MetaCommand::STRING,true,"");
 
     command.SetOption("UpdateRule","r",false,"Update rule:  0 : SSD similarity - exp(v)<-exp(v)oexp(u) (log-domain),1 : SSD similarity - exp(v)<-symmetrized(exp(v)oexp(u)) (symmetriclog-domain), 2 : LCC similarity (default 1).");
     command.SetOptionLongTag("UpdateRule","update-rule");
@@ -196,7 +196,7 @@ void parseOpts (int argc, char **argv, struct arguments & args)
     // Store the parsed information into a struct
 
     args.outputFolder = command.GetValueAsString("OutputFolder","filename");
-    args.inputImage = command.GetValueAsString("inputImage","filename");
+    args.inputImage = command.GetValueAsString("InputImage","filename");
     args.nbrIterations = command.GetValueAsInt("Iteration","intval");
     args.updateRule= command.GetValueAsInt("UpdateRule","intval");
     args.regularization= command.GetValueAsInt("regularization","intval");
@@ -738,7 +738,7 @@ int main( int argc, char *argv[] )
             nameDown<<j<<".mha";
             writerSliceDown->SetFileName(nameDown.str().c_str());
             writerSliceDown->SetInput(downImage2);
-            writerSliceDown->Update();
+            //writerSliceDown->Update();
 
             itk::ImageFileWriter<SliceImageType>::Pointer writerSliceUp= itk::ImageFileWriter<SliceImageType>::New();
 
@@ -748,7 +748,7 @@ int main( int argc, char *argv[] )
             nameUp<<j<<".mha";
             writerSliceUp->SetFileName(nameUp.str().c_str());
             writerSliceUp->SetInput(upImage2);
-            writerSliceUp->Update();
+            //writerSliceUp->Update();
 
 
 
