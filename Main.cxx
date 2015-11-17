@@ -21,6 +21,10 @@
 #include "itkNumericSeriesFileNames.h"
 #include "itkExtractImageFilter.h"
 
+#include "itkMultiplyImageFilter.h"
+#include "itkAddImageFilter.h"
+#include "itkSubtractImageFilter.h"
+
 #include "rpiLCClogDemons.hxx"
 
 #include "itksys/SystemTools.hxx"
@@ -35,6 +39,7 @@ struct arguments
     int regularization;                     /* -R option */
     double sigmaI;                          /* -S option */
     double sigmaVel;                        /* -d option */
+    float maxDistance;                      /* -m option */
     std::string outputFolder;                   /* -o option */
     int refMesh;                                /* -refMesh option*/
     bool alphabeticalSort;                      /* -alphabeticalSort option*/
@@ -47,6 +52,7 @@ struct arguments
         return o
         <<"  Arguments structure:"<<std::endl
         <<" Mask image path:" << std::endl
+        <<" Max Distance Slice: "<<args.maxDistance<<std::endl
         <<" Number Iterations: "<<args.nbrIterations<<std::endl
         <<" Update Rule:" << args.updateRule<< std::endl
         <<" Regularization:" << args.regularization<< std::endl
@@ -146,6 +152,10 @@ void parseOpts (int argc, char **argv, struct arguments & args)
     command.SetOptionLongTag("Iteration","nbr-Iteration");
     command.AddOptionField("Iteration","intval",MetaCommand::INT,false,"3");
 
+    command.SetOption("maxDistance","m",false,"Max Distance of the slice taken into the interpolation");
+    command.SetOptionLongTag("maxDistance","max-Distance");
+    command.AddOptionField("maxDistance","floatval",MetaCommand::FLOAT,false,"1");
+
     command.SetOption("OutputFolder","o",false,"Ouput folder");
     command.SetOptionLongTag("OutputFolder","output-folder");
     command.AddOptionField("OutputFolder","filename",MetaCommand::STRING,false,"");
@@ -206,6 +216,7 @@ void parseOpts (int argc, char **argv, struct arguments & args)
             args.regularExpression=command.GetValueAsString("Reg","filename");
             args.alphabeticalSort=command.GetValueAsBool("AlphabeticalSort","boolval");
             args.maskImage=command.GetValueAsString("maskImage","filename");
+            args.maxDistance=command.GetValueAsFloat("maxDistance","floatval");
 
 }
 
@@ -231,6 +242,7 @@ int main( int argc, char *argv[] )
     typedef ImageType::Pointer                              ImagePointer;
     typedef itk::ImageFileWriter<ImageType>                   ImageFileWriter;
         typedef ImageFileWriter::Pointer                              ImageFileWriterPointer;
+    typedef itk::ImageFileWriter<SliceFieldType>            SliceFieldWriter;
 
     typedef itk::ImageFileReader<ImageType>       ImageReaderType;
     typedef ImageReaderType::Pointer                        ImageReaderPointer;
@@ -241,10 +253,27 @@ int main( int argc, char *argv[] )
     typedef itk::StationaryVelocityFieldTransform<double, 2>  SliceFieldTransformType;
 
 
+
     typedef itk::ExponentialDeformationFieldImageFilter<SliceFieldType,SliceFieldType> ExponentialFilterType;
     typedef ExponentialFilterType::Pointer                                   ExponentialFilterPointer;
 
     typedef itk::WarpImageFilter< SliceImageType, SliceImageType, SliceFieldType >  WarperType;
+
+
+    typedef rpi::LCClogDemons< SliceImageType, SliceImageType, double > RegistrationMethod;
+
+    typedef itk::Transform< double, 2, 2 > TransformType;
+
+    typedef itk::MultiplyByConstantImageFilter<SliceFieldType,float,SliceFieldType> MultiplyFieldFilter;
+    typedef itk::MultiplyByConstantImageFilter<SliceImageType,float,SliceImageType > MultiplyImageFilter;
+
+    typedef itk::AddImageFilter<SliceFieldType> AddFieldFilter;
+    typedef itk::AddImageFilter<SliceImageType> AddImageFilter;
+
+    typedef itk::SubtractImageFilter<SliceFieldType> SubtractImageFilter;
+
+
+    typedef itk::ImageDuplicator<SliceImageType> DuplicateSliceFilter;
 
     struct arguments args;
     parseOpts (argc, argv, args);
@@ -258,6 +287,23 @@ int main( int argc, char *argv[] )
 
     std::cout << "Starting Resample Barycentric with the following arguments:" << std::endl;
     std::cout<<args<<std::endl<<std::endl;
+
+
+
+    RegistrationMethod::UpdateRule updateRule;
+
+    switch( args.updateRule )
+               {
+    case 0:
+                   updateRule=RegistrationMethod::UPDATE_LOG_DOMAIN ; break;
+    case 1:
+        updateRule= RegistrationMethod::UPDATE_SYMMETRIC_LOG_DOMAIN ;break;
+    case 2:
+        updateRule=  RegistrationMethod::UPDATE_SYMMETRIC_LOCAL_LOG_DOMAIN; break;
+    default:
+        throw std::runtime_error( "Update rule must fit in the range [0,2]." );}
+
+
 
 
     /*
@@ -346,7 +392,7 @@ int main( int argc, char *argv[] )
 
 
     //for(unsigned int fni = 0; fni<numberOfFilenames; fni++)
-    {
+
         std::cout << "<<<<<<====================>>>> " << std::endl;
         std::cout << "<<<<<<====================>>>> " << std::endl;
         std::cout << "<<<<<<====================>>>> " << std::endl;
@@ -377,6 +423,9 @@ int main( int argc, char *argv[] )
 
         ImageType::SizeType size;
         size=image->GetLargestPossibleRegion().GetSize();
+
+        int nbrSliceInit=size[2];
+
         int sizez= (int) (baseSpacing[2]/(double)baseSpacing[0])*(size[2]-1)+1;
 
         sizez=sizez-1;
@@ -397,14 +446,572 @@ int main( int argc, char *argv[] )
         resampledImage->SetRegions(region);
         resampledImage->Allocate();
 
-        const SliceFieldType * svf2= SliceFieldType::New();
-        const SliceFieldType * svf1= SliceFieldType::New();
+
+        std::vector<SliceImageType::Pointer> slicesVector;
+        std::vector<RegistrationMethod*> registrationFilterVector;
+        std::vector<const SliceFieldType*> svfRegistrationVector;
+
+
+        for (int j=0;j<nbrSliceInit;++j)
+        {
+            ExtractSliceFilterType::Pointer extractSliceFilter = ExtractSliceFilterType::New();
+            extractSliceFilter->SetInput(image);
+            ImageType::RegionType region;
+
+            ImageType::SizeType size=image->GetLargestPossibleRegion().GetSize();
+            size[2]=0;
+            region.SetSize(size);
+
+            ImageType::IndexType index;
+            index.Fill(0);
+            index[2]=j;
+            region.SetIndex(index);
+
+            extractSliceFilter->SetExtractionRegion(region);
+            extractSliceFilter->SetDirectionCollapseToSubmatrix();
+            extractSliceFilter->Update();
+
+
+
+            SliceImageType::Pointer slice=extractSliceFilter->GetOutput();
+            slice->DisconnectPipeline();
+
+            SliceImageType::PointType origin;
+            origin.Fill(0);
+            slice->SetOrigin(origin);
+
+            SliceImageType::DirectionType direction;
+            direction.SetIdentity();
+            slice->SetDirection(direction);
+
+            slicesVector.push_back(slice);
+
+            RegistrationMethod * registration = new RegistrationMethod();
+
+
+            registration->SetSigmaI(args.sigmaI);
+
+            registration->SetStationaryVelocityFieldStandardDeviation(args.sigmaVel);
+            registration->SetRegularizationType(args.regularization);
+            registration->SetUpdateRule(updateRule);
+            if (!args.maskImage.empty())
+            {
+                //registration->SetMaskImage(maskSliceImage);
+                registration->UseMask(true);
+            }
+             //registration->SetMovingImage(currentImage);
+
+             registration->SetFixedImage(slice);
+             registration->SetVerbosity(false);
+             registrationFilterVector.push_back(registration);
+
+             const SliceFieldType * svf= 0;
+
+             svfRegistrationVector.push_back(svf);
+
+
+        }
+
+
+
+
+
+
+        //const SliceFieldType * svf2= SliceFieldType::New();
+
+        SliceImageType::Pointer currentImage=0;
 
         for (int j=0; j<sizez ; ++j)
         {
 
 
             std::cout << "Lambda registration for slice " << j << std::endl;
+            float valueInSlice=j*spacing[2]/baseSpacing[2];
+
+
+            if (floorf(valueInSlice)==valueInSlice)
+            {
+                std::cout << "Slice " << j << " exactly matches slice " <<floorf(valueInSlice) << " of the initial image "<< std::endl;
+
+                DuplicateSliceFilter::Pointer duplicateSlice = DuplicateSliceFilter::New();
+                duplicateSlice->SetInputImage(slicesVector[floorf(valueInSlice)]);
+                duplicateSlice->Update();
+                currentImage=duplicateSlice->GetOutput();
+            }
+            else
+            {
+                std::vector<float> vectorCoefficients;
+                float total=0;
+
+                for (int i=0;i<nbrSliceInit;++i)
+                {
+                    float distance=std::abs(valueInSlice-i);
+                    if (distance<args.maxDistance)
+                    {
+                        distance=1/std::pow(distance,2);
+                       vectorCoefficients.push_back(distance);
+                        total+=distance;
+                    }
+                    else
+                        vectorCoefficients.push_back(0);
+
+                }
+
+                std::cout << "Coefficient for slice " << j << std::endl;
+                float max=0;
+                int maxLambda=0;
+
+                for (int i=0;i<nbrSliceInit;++i)
+                {
+                    vectorCoefficients[i]=vectorCoefficients[i]/total;
+                    std::cout << vectorCoefficients[i] << std::endl;
+
+                    if (vectorCoefficients[i]>max)
+                    {
+                        maxLambda=i;
+                        max=vectorCoefficients[i];
+                    }
+
+
+                }
+
+                std::cout << "Max coefficient is slice " << maxLambda << std::endl;
+
+
+                DuplicateSliceFilter::Pointer duplicateSlice = DuplicateSliceFilter::New();
+                duplicateSlice->SetInputImage(slicesVector[maxLambda]);
+                duplicateSlice->Update();
+                currentImage=duplicateSlice->GetOutput();
+                currentImage->DisconnectPipeline();
+
+                itk::ImageFileWriter<SliceImageType>::Pointer writerM= itk::ImageFileWriter<SliceImageType>::New();
+
+                std::ostringstream name;
+                name << args.outputFolder;
+                name<<"image_slice_Init_S"<<j;
+                name<<".mha";
+
+                writerM->SetFileName(name.str().c_str());
+                writerM->SetInput(currentImage);
+                //writerM->Update();
+
+
+                for (int iteration=0; iteration<args.nbrIterations;++iteration)
+                {
+
+                    std::cout << "Iteration number : " << iteration <<" for slice " << j << std::endl;
+
+                    bool firstSvf=true;
+                    bool firstImage=true;
+
+                    SliceFieldType::Pointer lambdaSvf;
+
+                    for (int i=0;i<nbrSliceInit;++i)
+                       if (vectorCoefficients[i]>0)
+                       {
+
+                            registrationFilterVector[i]->SetMovingImage(currentImage);
+                            registrationFilterVector[i]->StartRegistration();
+                            TransformType * transformp= registrationFilterVector[i]->GetTransformation();
+
+                            SliceFieldTransformType * transform = dynamic_cast<SliceFieldTransformType *>(transformp);
+
+                            svfRegistrationVector[i]= transform->GetParametersAsVectorField();
+
+                            itk::ImageRegionConstIterator<const SliceFieldType> it(svfRegistrationVector[i],svfRegistrationVector[i]->GetLargestPossibleRegion());
+
+                            /*
+                            for (it.GoToBegin();!it.IsAtEnd();++it)
+                            {
+                                std::cout << "index " << it.GetIndex() << std::endl;
+                                std::cout << it.Get() << std::endl;
+                            }
+                            */
+
+                            std::cout << "GetMovingImage " << std::endl;
+
+                            registrationFilterVector[i]->GetMovingImage()->Print(std::cout);
+                            std::cout << "GetFixedImage " << std::endl;
+
+                            registrationFilterVector[i]->GetFixedImage()->Print(std::cout);
+                            std::cout << "SVF " << std::endl;
+
+                            svfRegistrationVector[i]->Print(std::cout);
+
+                            std::ostringstream nameSvf;
+                            nameSvf << args.outputFolder;
+                            nameSvf<<"image_slice_svf_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                            nameSvf<<".mha";
+
+
+                            SliceFieldWriter::Pointer writerSvf=SliceFieldWriter::New();
+                            writerSvf->SetFileName(nameSvf.str().c_str());
+                            writerSvf->SetInput(svfRegistrationVector[i]);
+                            //writerSvf->Update();
+
+                            itk::ImageFileWriter<SliceImageType>::Pointer writerM= itk::ImageFileWriter<SliceImageType>::New();
+
+                            std::ostringstream name;
+                            name << args.outputFolder;
+                            name<<"image_slice_fixed_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                            name<<".mha";
+
+                            writerM->SetFileName(name.str().c_str());
+                            writerM->SetInput(registrationFilterVector[i]->GetFixedImage());
+                            //writerM->Update();
+
+                            std::ostringstream namem;
+                            namem << args.outputFolder;
+                            namem<<"image_slice_moving_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                            namem<<".mha";
+
+                            writerM->SetFileName(namem.str().c_str());
+                            writerM->SetInput(registrationFilterVector[i]->GetMovingImage());
+                            //writerM->Update();
+
+
+
+                            ExponentialFilterPointer filterExp= ExponentialFilterType::New();
+                            filterExp->SetInput(svfRegistrationVector[i]);
+                            //filter->ComputeInverseOn();
+
+                            typename WarperType::Pointer warperR = WarperType::New();
+
+
+                            warperR->SetInput(  registrationFilterVector[i]->GetMovingImage());
+                            warperR->SetOutputParametersFromImage(registrationFilterVector[i]->GetMovingImage());
+                            warperR->SetDeformationField( filterExp->GetOutput() );
+
+
+                            itk::ImageFileWriter<SliceImageType>::Pointer writerR= itk::ImageFileWriter<SliceImageType>::New();
+
+                            std::ostringstream namer;
+                            namer << args.outputFolder;
+                            namer<<"image_slice_registration_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                            namer<<".mha";
+
+                            writerR->SetFileName(namer.str().c_str());
+                            writerR->SetInput(warperR->GetOutput());
+                            //writerR->Update();
+
+
+
+                            MultiplyFieldFilter::Pointer multiplyFilter = MultiplyFieldFilter::New();
+                            multiplyFilter->SetInput1(svfRegistrationVector[i]);
+                            multiplyFilter->SetConstant2(vectorCoefficients[i]);
+
+
+                            /*
+                            itk::ImageRegionIterator<const SliceFieldType> it1(multiplyFilter->GetOutput(),multiplyFilter->GetOutput()->GetLargestPossibleRegion());
+                            itk::ImageRegionIterator<const SliceFieldType> it2(svfRegistrationVector[i],svfRegistrationVector[i]->GetLargestPossibleRegion());
+
+                            for (it1.GoToBegin(),it2.GoToBegin();!it1.IsAtEnd();++it1,++it2)
+                            {
+                                std::cout << "value multiply" << std::endl;
+                                std::cout << it1.Get() << std::endl;
+
+                                std::cout << it2.Get() << std::endl;
+
+
+                            }
+                            */
+
+                            if (firstSvf)
+                            {
+                                multiplyFilter->Update();
+
+                                lambdaSvf=multiplyFilter->GetOutput();
+                                firstSvf=false;
+                            }
+                            else
+                            {
+
+                                AddFieldFilter::Pointer addFieldImage = AddFieldFilter::New();
+                                addFieldImage->SetInput1(lambdaSvf);
+                                addFieldImage->SetInput2(multiplyFilter->GetOutput());
+                                addFieldImage->Update();
+
+                                lambdaSvf=addFieldImage->GetOutput();
+
+
+                            }
+
+                            lambdaSvf->DisconnectPipeline();
+
+                            std::cout << "checkpoint e " << std::endl;
+
+
+                            std::ostringstream namelambdasvf;
+                            namelambdasvf << args.outputFolder;
+                            namelambdasvf<<"image_slice_lambdaSVF_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                            namelambdasvf<<".mha";
+
+                            SliceFieldWriter::Pointer writerSvfL=SliceFieldWriter::New();
+                            writerSvfL->SetFileName(namelambdasvf.str().c_str());
+                            writerSvfL->SetInput(lambdaSvf);
+                            //writerSvfL->Update();
+
+
+                       }
+
+
+                    for (int i=0;i<nbrSliceInit;++i)
+                       if (vectorCoefficients[i]>0)
+                       {
+
+                           SubtractImageFilter::Pointer subtractField = SubtractImageFilter::New();
+                           subtractField->SetInput1(lambdaSvf);
+                           subtractField->SetInput2(svfRegistrationVector[i]);
+                           subtractField->Update();
+
+                           const SliceFieldType::Pointer lambdafield= subtractField->GetOutput();
+
+                           /*
+                           itk::ImageRegionConstIterator<const SliceFieldType> it1(svfRegistrationVector[i],svfRegistrationVector[i]->GetLargestPossibleRegion());
+                           itk::ImageRegionConstIterator<const SliceFieldType> it2(lambdaSvf,lambdaSvf->GetLargestPossibleRegion());
+                           itk::ImageRegionConstIterator<const SliceFieldType> it3(lambdafield,lambdafield->GetLargestPossibleRegion());
+
+                           for (it1.GoToBegin(),it2.GoToBegin(),it3.GoToBegin();!it1.IsAtEnd();++it1,++it2,++it3)
+                           {
+                               std::cout << "value subtract" << std::endl;
+
+                               std::cout << it2.Get() << std::endl;
+                               std::cout << it1.Get() << std::endl;
+                               std::cout << it3.Get() << std::endl;
+
+                           }
+                           */
+
+
+                           std::ostringstream namelambda;
+                           namelambda << args.outputFolder;
+                           namelambda<<"image_slice_lambda_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                           namelambda<<".mha";
+
+                           SliceFieldWriter::Pointer writerSvf=SliceFieldWriter::New();
+                           writerSvf->SetFileName(namelambda.str().c_str());
+                           writerSvf->SetInput(subtractField->GetOutput());
+                           //writerSvf->Update();
+
+                           ExponentialFilterPointer filter= ExponentialFilterType::New();
+                           filter->SetInput(subtractField->GetOutput());
+                           //filter->ComputeInverseOn();
+
+                           typename WarperType::Pointer warper = WarperType::New();
+
+
+                           warper->SetInput( slicesVector[i] );
+                           warper->SetOutputParametersFromImage(slicesVector[i]);
+                           warper->SetDeformationField( filter->GetOutput() );
+
+                           //warper->Update();
+
+                           MultiplyImageFilter::Pointer multiplyImage = MultiplyImageFilter::New();
+                           multiplyImage->SetInput1(warper->GetOutput());
+                           multiplyImage->SetConstant2(vectorCoefficients[i]);
+
+
+
+                           itk::ImageFileWriter<SliceImageType>::Pointer writerM= itk::ImageFileWriter<SliceImageType>::New();
+
+                           std::ostringstream name;
+                           name << args.outputFolder;
+                           name<<"image_slice_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                           name<<".mha";
+
+                           writerM->SetFileName(name.str().c_str());
+                           writerM->SetInput(multiplyImage->GetOutput());
+                           //writerM->Update();
+
+
+                           if (firstImage)
+                           {
+                               multiplyImage->Update();
+                               currentImage=multiplyImage->GetOutput();
+                               firstImage=false;
+
+                           }
+                           else
+                           {
+                               AddImageFilter::Pointer addImage = AddImageFilter::New();
+                               addImage->SetInput1(currentImage);
+                               addImage->SetInput2(multiplyImage->GetOutput());
+                               addImage->Update();
+                               currentImage=addImage->GetOutput();
+
+
+                           }
+
+                           currentImage->DisconnectPipeline();
+
+
+
+                           /*
+                           MultiplyFieldFilter::Pointer multiplyFilter = MultiplyFieldFilter::New();
+                           multiplyFilter->SetInput1(svfRegistrationVector[i]);
+                           multiplyFilter->SetConstant2(vectorCoefficients[i]);
+
+                           ExponentialFilterPointer filter= ExponentialFilterType::New();
+                           filter->SetInput(svfRegistrationVector[i]);
+                           filter->ComputeInverseOn();
+
+                           typename WarperType::Pointer warper = WarperType::New();
+
+
+                           warper->SetInput( slicesVector[i] );
+                           warper->SetOutputParametersFromImage(slicesVector[i]);
+                           warper->SetDeformationField( filter->GetOutput() );
+
+                           warper->Update();
+
+
+
+                           MultiplyImageFilter::Pointer multiplyImage = MultiplyImageFilter::New();
+                           multiplyImage->SetInput1(warper->GetOutput());
+                           multiplyImage->SetConstant2(vectorCoefficients[i]);
+                           itk::ImageFileWriter<SliceImageType>::Pointer writerM= itk::ImageFileWriter<SliceImageType>::New();
+
+                           std::ostringstream name;
+                           name << args.outputFolder;
+                           name<<"image_slice_I"<<iteration<<"_S"<<j<<"_R"<<i;
+                           name<<".mha";
+
+                           writerM->SetFileName(name.str().c_str());
+                           writerM->SetInput(multiplyImage->GetOutput());
+                           writerM->Update();
+
+
+                           if (firstSvf)
+                           {
+                               multiplyFilter->Update();
+                               currentSvf=multiplyFilter->GetOutput();
+                               currentSvf->DisconnectPipeline();
+
+                               multiplyImage->Update();
+                               currentImage=multiplyImage->GetOutput();
+                               currentImage->DisconnectPipeline();
+
+                               firstSvf=false;
+
+                           }
+                           else
+                           {
+                               AddFieldFilter::Pointer addFieldImage = AddFieldFilter::New();
+                               addFieldImage->SetInput1(currentSvf);
+                               addFieldImage->SetInput2(multiplyFilter->GetOutput());
+                               addFieldImage->Update();
+
+                               currentSvf=addFieldImage->GetOutput();
+                               currentSvf->DisconnectPipeline();
+
+                               AddImageFilter::Pointer addImage = AddImageFilter::New();
+                               addImage->SetInput1(currentImage);
+                               addImage->SetInput2(multiplyImage->GetOutput());
+                               addImage->Update();
+
+                               currentImage=addImage->GetOutput();
+                               currentImage->DisconnectPipeline();
+
+
+                           }
+
+                           */
+
+
+
+                       }
+                /*
+                    std::cout << " Computing exponential of svf" << std::endl;
+
+                  ExponentialFilterPointer filter= ExponentialFilterType::New();
+                  filter->SetInput(currentSvf);
+                  //filter->Update();
+
+
+                  std::cout << " Warping Image" << std::endl;
+                  typename WarperType::Pointer warper = WarperType::New();
+
+                  warper->SetInput( currentImage );
+                  warper->SetOutputParametersFromImage(currentImage);
+                  warper->SetDeformationField( filter->GetOutput() );
+
+                  warper->Update();
+
+                  currentImage=warper->GetOutput();
+                  currentImage->DisconnectPipeline();
+
+                */
+                  itk::ImageFileWriter<SliceImageType>::Pointer writer= itk::ImageFileWriter<SliceImageType>::New();
+
+                  std::ostringstream nameDown;
+                  nameDown << args.outputFolder;
+                  nameDown<<"image_slice_I"<<iteration;
+                  nameDown<<"_S"<<j<<".mha";
+                  writer->SetFileName(nameDown.str().c_str());
+                  writer->SetInput(currentImage);
+                  //writer->Update();
+
+
+                }
+
+
+                }
+
+                itk::ImageFileWriter<SliceImageType>::Pointer writerSliceDown= itk::ImageFileWriter<SliceImageType>::New();
+
+                std::ostringstream nameDown;
+                nameDown << args.outputFolder;
+                nameDown<<"image_slice_S";
+                nameDown<<j<<".mha";
+                writerSliceDown->SetFileName(nameDown.str().c_str());
+                writerSliceDown->SetInput(currentImage);
+                //writerSliceDown->Update();
+
+                itk::ImageRegionIterator<ImageType> itResampled(resampledImage,resampledImage->GetLargestPossibleRegion());
+
+                ImageType::IndexType indexResampled;
+                indexResampled.Fill(0);
+                indexResampled[2]=j;
+
+                itResampled.SetIndex(indexResampled);
+
+                itk::ImageRegionIterator<SliceImageType> itcurrent(currentImage,currentImage->GetLargestPossibleRegion());
+
+
+                for (itcurrent.GoToBegin();!itcurrent.IsAtEnd();++itcurrent,++itResampled)
+                    itResampled.Set(itcurrent.Get());
+
+
+
+
+
+        }
+
+
+
+
+
+           ImageFileWriter::Pointer writerImage = ImageFileWriter::New();
+           //writerImage->SetFileName(outputNamesGenerator->GetFileNames()[fni]);
+           writerImage->SetFileName(args.outputFolder.c_str());
+
+           writerImage->SetInput(resampledImage);
+           writerImage->Update();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+            /*
             int sliceDown= (int) j*spacing[2]/baseSpacing[2];
             int sliceUp=sliceDown+1;
 
@@ -558,28 +1165,6 @@ int main( int argc, char *argv[] )
 
                 std::cout << "Iteration number " << iteration << std::endl;
 
-                typedef rpi::LCClogDemons< SliceImageType, SliceImageType, double >
-                        RegistrationMethod;
-
-                typedef itk::Transform<double, 2, 2>
-                        LinearTransformType;
-
-
-                typedef itk::Transform< double, 2, 2 >
-                        TransformType;
-
-         RegistrationMethod::UpdateRule updateRule;
-
-                switch( args.updateRule )
-                           {
-                case 0:
-                               updateRule=RegistrationMethod::UPDATE_LOG_DOMAIN ; break;
-                case 1:
-                    updateRule= RegistrationMethod::UPDATE_SYMMETRIC_LOG_DOMAIN ;break;
-                case 2:
-                    updateRule=  RegistrationMethod::UPDATE_SYMMETRIC_LOCAL_LOG_DOMAIN; break;
-                default:
-                    throw std::runtime_error( "Update rule must fit in the range [0,2]." );}
 
 
                 // Creation of the registration object
@@ -785,6 +1370,6 @@ int main( int argc, char *argv[] )
     }
 }
 
-
+*/
 
 
