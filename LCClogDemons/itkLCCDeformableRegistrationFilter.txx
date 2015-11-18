@@ -881,8 +881,10 @@ void
 LCCDeformableRegistrationFilter<TFixedImage,TMovingImage,TField>
 ::Initialize()
 {
+
   //std::cout<<"LCCDeformableRegistrationFilter::Initialize"<<std::endl;
   this->Superclass::Initialize();
+
   m_StopRegistrationFlag = false;
 }
 
@@ -893,7 +895,6 @@ void
 LCCDeformableRegistrationFilter<TFixedImage,TMovingImage,TField>
 ::SmoothVelocityField()
 { 
-
   if (m_RegularizationType == 1)
     {
 

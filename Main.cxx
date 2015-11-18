@@ -37,6 +37,9 @@ struct arguments
     int nbrIterations;                       /* -t option */
     int updateRule;                         /* -r option */
     int regularization;                     /* -R option */
+    float alpha;                     /* -A option */
+    float similarity;                       /*-c option*/
+
     double sigmaI;                          /* -S option */
     double sigmaVel;                        /* -d option */
     float maxDistance;                      /* -m option */
@@ -53,10 +56,14 @@ struct arguments
         <<"  Arguments structure:"<<std::endl
         <<" Mask image path:" << std::endl
         <<" Max Distance Slice: "<<args.maxDistance<<std::endl
+        <<" Alpha: "<<args.alpha<<std::endl
+
         <<" Number Iterations: "<<args.nbrIterations<<std::endl
         <<" Update Rule:" << args.updateRule<< std::endl
         <<" Regularization:" << args.regularization<< std::endl
         <<" Sigma I:" << args.sigmaI<< std::endl
+        <<" Similarity (LCC):" << args.similarity<< std::endl
+
         <<" Sigma Vel:" << args.sigmaVel<< std::endl
         <<" Input Folder:" << args.inputImage << std::endl
         <<" Reg:" << args.regularExpression << std::endl
@@ -147,6 +154,15 @@ void parseOpts (int argc, char **argv, struct arguments & args)
     // Define parsing options
 
 
+    command.SetOption("Alpha","A",false,"value of alpha");
+    command.SetOptionLongTag("Alpha","alpha");
+    command.AddOptionField("Alpha","floatval",MetaCommand::FLOAT,false,"1");
+
+
+    command.SetOption("Similarity","c",false,"value of the similiarty criterion for the LCC regularisation of the update field");
+    command.SetOptionLongTag("Similarity","similarity");
+    command.AddOptionField("Similarity","floatval",MetaCommand::FLOAT,false,"3");
+
 
     command.SetOption("Iteration","t",false,"Iteration");
     command.SetOptionLongTag("Iteration","nbr-Iteration");
@@ -217,6 +233,8 @@ void parseOpts (int argc, char **argv, struct arguments & args)
             args.alphabeticalSort=command.GetValueAsBool("AlphabeticalSort","boolval");
             args.maskImage=command.GetValueAsString("maskImage","filename");
             args.maxDistance=command.GetValueAsFloat("maxDistance","floatval");
+            args.alpha=command.GetValueAsFloat("Alpha","floatval");
+            args.similarity=command.GetValueAsFloat("Similarity","floatval");
 
 }
 
@@ -488,21 +506,25 @@ int main( int argc, char *argv[] )
 
             RegistrationMethod * registration = new RegistrationMethod();
 
-
-            registration->SetSigmaI(args.sigmaI);
+            if (args.updateRule==2)
+                registration->SetSigmaI(args.sigmaI);
 
             registration->SetStationaryVelocityFieldStandardDeviation(args.sigmaVel);
             registration->SetRegularizationType(args.regularization);
             registration->SetUpdateRule(updateRule);
+            registration->SetSimilarityCriteriaStandardDeviation(args.similarity);
+
             if (!args.maskImage.empty())
             {
                 //registration->SetMaskImage(maskSliceImage);
                 registration->UseMask(true);
             }
+            else
+                registration->UseMask(false);
              //registration->SetMovingImage(currentImage);
 
              registration->SetFixedImage(slice);
-             registration->SetVerbosity(false);
+             registration->SetVerbosity(true);
              registrationFilterVector.push_back(registration);
 
              const SliceFieldType * svf= 0;
@@ -511,9 +533,6 @@ int main( int argc, char *argv[] )
 
 
         }
-
-
-
 
 
 
@@ -548,7 +567,7 @@ int main( int argc, char *argv[] )
                     float distance=std::abs(valueInSlice-i);
                     if (distance<args.maxDistance)
                     {
-                        distance=1/std::pow(distance,2);
+                        distance=1/std::pow(distance,args.alpha);
                        vectorCoefficients.push_back(distance);
                         total+=distance;
                     }
@@ -627,16 +646,6 @@ int main( int argc, char *argv[] )
                                 std::cout << it.Get() << std::endl;
                             }
                             */
-
-                            std::cout << "GetMovingImage " << std::endl;
-
-                            registrationFilterVector[i]->GetMovingImage()->Print(std::cout);
-                            std::cout << "GetFixedImage " << std::endl;
-
-                            registrationFilterVector[i]->GetFixedImage()->Print(std::cout);
-                            std::cout << "SVF " << std::endl;
-
-                            svfRegistrationVector[i]->Print(std::cout);
 
                             std::ostringstream nameSvf;
                             nameSvf << args.outputFolder;
@@ -738,7 +747,6 @@ int main( int argc, char *argv[] )
 
                             lambdaSvf->DisconnectPipeline();
 
-                            std::cout << "checkpoint e " << std::endl;
 
 
                             std::ostringstream namelambdasvf;

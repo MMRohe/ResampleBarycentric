@@ -670,6 +670,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
         for (unsigned int dim=0; dim<VelocityFieldType::ImageDimension; ++dim)
         {
             // sigma accounts for the subsampling of the pyramid
+
             double sigma = 0.5 * static_cast<float>( m_FixedImagePyramid->GetSchedule()[fixedLevel][dim] );
 
             // but also for a possible discrepancy in the spacing
@@ -680,6 +681,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
             smoother->SetDirection( dim );
 
             smoother->Update();
+
 
             tempField = smoother->GetOutput();
             tempField->DisconnectPipeline();
@@ -701,6 +703,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
         tempField->DisconnectPipeline();
     }
 
+
     if (m_UseMask)
       {
        m_ImageExpander->SetInput( m_MaskImage );
@@ -717,6 +720,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
 
     if (m_RegularizationType==0)
       {
+
         // Mode for smoothing or not the velocity field
         if ( this->m_SmoothVelocityField )
            m_RegistrationFilter->SmoothVelocityFieldOn();
@@ -778,7 +782,6 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
             tempField = m_FieldExpander->GetOutput();
             tempField->DisconnectPipeline();
 
-	    
             m_RegistrationFilter->SetInitialVelocityField( tempField );
 
             // Resample the mask image to be the same size as the fixed image at the current level
@@ -864,8 +867,10 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
         }
 
         // compute new velocity field
+
+
         m_RegistrationFilter->UpdateLargestPossibleRegion();
-       // std::cout<<"Smoothing velocity!"<<std::endl;
+
        // m_RegistrationFilter->SmoothVelocityField();
 
         //Workaround for keep multithreading while regularing in Fourier domain
@@ -873,7 +878,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
 
         tempField->DisconnectPipeline();
 
-	
+
 	
         // Increment level counter.
         m_CurrentLevel++;
@@ -896,6 +901,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
         }
 
     } // while not Halt()
+
 
     if( !lastShrinkFactorsAllOnes )
     {
@@ -948,6 +954,7 @@ MultiResolutionLCCDeformableRegistration<TFixedImage,TMovingImage,TField,TRealTy
     m_FieldExpander->SetInput( NULL );
     m_FieldExpander->GetOutput()->ReleaseData();
     m_RegistrationFilter->SetInput( NULL );
+
     m_RegistrationFilter->GetOutput()->ReleaseData();
 
 }

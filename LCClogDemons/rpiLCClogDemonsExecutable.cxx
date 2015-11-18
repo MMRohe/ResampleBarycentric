@@ -502,7 +502,7 @@ int StartMainProgram(struct Param param)
 /**
  * Main function.
  */
-int main(int c, char** argv)
+int main(int argc, char** argv)
 {
    // itk::MultiThreader::SetGlobalDefaultNumberOfThreads(1);
     // Parse parameters

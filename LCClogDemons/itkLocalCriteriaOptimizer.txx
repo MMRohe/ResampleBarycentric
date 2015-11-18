@@ -188,7 +188,7 @@ itk::SmartPointer<TImageType1> Sqrt(itk::SmartPointer<TImageType1> Image1)
 
 
 template<class TImageType>
-itk::SmartPointer<TImageType> SmoothGivenField(itk::SmartPointer<TImageType> InputImage,double Sigma[3])
+itk::SmartPointer<TImageType> SmoothGivenField(itk::SmartPointer<TImageType> InputImage,double Sigma[TImageType::ImageDimension])
 {
 typedef itk::ImageDuplicator< TImageType > DuplicatorType;
  typename DuplicatorType::Pointer duplicator = DuplicatorType::New();
@@ -196,32 +196,29 @@ typedef itk::ImageDuplicator< TImageType > DuplicatorType;
  duplicator->SetInputImage(InputImage);
  duplicator->Update();
 
+ typename TImageType::Pointer currentImage=duplicator->GetOutput();
+ currentImage->DisconnectPipeline();
+
+
+ const int nbrDim=TImageType::ImageDimension;
 
  typedef  itk::RecursiveGaussianImageFilter <TImageType,TImageType> RGFType;
- typename RGFType::Pointer DGF0=RGFType::New();
- typename RGFType::Pointer DGF1=RGFType::New();
- typename RGFType::Pointer DGF2=RGFType::New();
 
- DGF0->SetOrder(RGFType::ZeroOrder);
- DGF1->SetOrder(RGFType::ZeroOrder);
- DGF2->SetOrder(RGFType::ZeroOrder);
+ for (int i=0; i<nbrDim;++i)
+ {
 
-  DGF0->SetSigma( Sigma[0] );
-  DGF1->SetSigma( Sigma[1] );
-  DGF2->SetSigma( Sigma[2] );
+     typename RGFType::Pointer DGF=RGFType::New();
+     DGF->SetOrder(RGFType::ZeroOrder);
+     DGF->SetSigma( Sigma[i] );
+     DGF->SetDirection(i);
+     DGF->SetInput(currentImage);
+     DGF->Update();
+     currentImage=DGF->GetOutput();
+     currentImage->DisconnectPipeline();
 
- DGF0->SetDirection(0);
- DGF1->SetDirection(1);
- DGF2->SetDirection(2);
 
-  DGF0->SetInput(duplicator->GetOutput());
-  DGF0->Update();
-  DGF1->SetInput(DGF0->GetOutput());
-  DGF1->Update();
-  DGF2->SetInput(DGF1->GetOutput());
-  DGF2->Update();
-
-  return(DGF2->GetOutput());
+ }
+  return(currentImage);
 }
 
 template<class TImageType1>

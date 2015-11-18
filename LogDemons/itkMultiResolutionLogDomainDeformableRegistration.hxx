@@ -538,15 +538,16 @@ MultiResolutionLogDomainDeformableRegistration<TFixedImage, TMovingImage, TField
     for( unsigned int dim = 0; dim < VelocityFieldType::ImageDimension; ++dim )
       {
       // sigma accounts for the subsampling of the pyramid
+
       double sigma = 0.5 * static_cast<float>(
           m_FixedImagePyramid->GetSchedule()[fixedLevel][dim] );
 
       // but also for a possible discrepancy in the spacing
       sigma *= fixedImage->GetSpacing()[dim]
         / inputPtr->GetSpacing()[dim];
-
       smoother->SetInput( tempField );
       smoother->SetSigma( sigma );
+
       smoother->SetDirection( dim );
 
       smoother->Update();

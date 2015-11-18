@@ -25,6 +25,8 @@ INCLUDE_DIRECTORIES(
   ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/RegistrationProgrammingInterface
     ${PROJECT_SOURCE_DIR}/LogDemons
+    ${PROJECT_SOURCE_DIR}/tclap
+
     ${PROJECT_SOURCE_DIR}/LCClogDemons
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
@@ -32,18 +34,20 @@ INCLUDE_DIRECTORIES(
 )
 
 SET(ResampleBarycentric_Headers
-  ${PROJECT_SOURCE_DIR}/itkExponentialDeformationFieldImageFilter2.h
-  ${PROJECT_SOURCE_DIR}/itkExponentialDeformationFieldImageFilter2.txx
-  ${PROJECT_SOURCE_DIR}/itkLCCDeformableRegistrationFilter.txx
-  ${PROJECT_SOURCE_DIR}/itkLCCDeformableRegistrationFilter.h
-  ${PROJECT_SOURCE_DIR}/itkLCClogDemonsRegistrationFilter.txx
-  ${PROJECT_SOURCE_DIR}/itkLCClogDemonsRegistrationFilter.h
-  ${PROJECT_SOURCE_DIR}/itkLocalCriteriaOptimizer.txx
-  ${PROJECT_SOURCE_DIR}/itkLocalCriteriaOptimizer.h
-  ${PROJECT_SOURCE_DIR}/itkSymmetricLCClogDemonsRegistrationFilter.txx
-  ${PROJECT_SOURCE_DIR}/itkSymmetricLCClogDemonsRegistrationFilter.h
-  ${PROJECT_SOURCE_DIR}/rpiLCClogDemons.cxx
-  ${PROJECT_SOURCE_DIR}/rpiLCClogDemons.hxx
+  ${PROJECT_SOURCE_DIR}/LCClogDemons/itkMultiResolutionLCCDeformableRegistration.txx
+  ${PROJECT_SOURCE_DIR}/LCClogDemons/itkMultiResolutionLCCDeformableRegistration.h
+  ${PROJECT_SOURCE_DIR}/LogDemons/itkMultiResolutionLogDomainDeformableRegistration.hxx
+  ${PROJECT_SOURCE_DIR}/LogDemons/itkMultiResolutionLogDomainDeformableRegistration.h
+  ${PROJECT_SOURCE_DIR}/RegistrationProgrammingInterface/rpiRegistrationMethod.hxx
+  ${PROJECT_SOURCE_DIR}/RegistrationProgrammingInterface/rpiRegistrationMethod.cxx
+${PROJECT_SOURCE_DIR}/LCClogDemons/rpiLCClogDemons.hxx
+${PROJECT_SOURCE_DIR}/LCClogDemons/rpiLCClogDemons.cxx
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkLCCDeformableRegistrationFilter.txx
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkLCCDeformableRegistrationFilter.h
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkSymmetricLCClogDemonsRegistrationFilter.h
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkSymmetricLCClogDemonsRegistrationFilter.txx
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkLocalCriteriaOptimizer.h
+${PROJECT_SOURCE_DIR}/LCClogDemons/itkLocalCriteriaOptimizer.txx
 
   )
 

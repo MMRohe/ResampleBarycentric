@@ -124,7 +124,6 @@ SymmetricLCClogDemonsRegistrationFilter<TFixedImage,TMovingImage,TField>
 {
   // update variables in the equation object
   DemonsRegistrationFunctionType *f = this->GetForwardRegistrationFunctionType();
-
 #if (ITK_VERSION_MAJOR < 4)
   f->SetDisplacementField( this->GetDeformationField() );
 #else
@@ -156,6 +155,7 @@ void
 SymmetricLCClogDemonsRegistrationFilter<TFixedImage,TMovingImage,TField>
 ::Initialize()
 {
+
   this->Superclass::Initialize();
 
   const FixedImageType * fixim = this->GetFixedImage();
@@ -330,7 +330,6 @@ SymmetricLCClogDemonsRegistrationFilter<TFixedImage,TMovingImage,TField>
   const DemonsRegistrationFunctionType *drfpf = this->GetForwardRegistrationFunctionType();
 
   this->SetRMSChange( drfpf->GetRMSChange() );
-
 
   if ( this->m_NumberOfBCHApproximationTerms < 3 )
     {
